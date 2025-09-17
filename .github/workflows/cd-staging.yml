@@ -7,7 +7,6 @@ on:
     workflows: ["Backend CI - Test, Build and Push Images to ACR", "Frontend CI - Build & Push Image"]
     types:
       - completed
-  workflow_dispatch:   # allow manual trigger too
 
 env:
   ACR_LOGIN_SERVER: ${{ secrets.AZURE_CONTAINER_REGISTRY }}
@@ -22,7 +21,7 @@ jobs:
     environment: Staging
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
 
       - name: Azure Login
@@ -51,20 +50,18 @@ jobs:
           kubectl apply -n $STAGING_NAMESPACE -f k8s/product-db.yaml
           kubectl apply -n $STAGING_NAMESPACE -f k8s/order-service.yaml
           kubectl apply -n $STAGING_NAMESPACE -f k8s/product-service.yaml
+          kubectl apply -n $STAGING_NAMESPACE -f k8s/customer-service.yaml
 
       - name: Deploy Frontend
-        run: |
-          kubectl apply -n $STAGING_NAMESPACE -f k8s/frontend.yaml
+        run: kubectl apply -n $STAGING_NAMESPACE -f k8s/frontend.yaml
 
-      - name: Wait for Pods to be Ready
-        run: |
-          kubectl wait --for=condition=ready pod --all -n $STAGING_NAMESPACE --timeout=300s
+      - name: Wait for pods to be ready
+        run: kubectl wait --for=condition=ready pod --all -n $STAGING_NAMESPACE --timeout=180s
 
       - name: Run health checks
         run: |
-          echo "Checking frontend health endpoint..."
           kubectl run curlpod -n $STAGING_NAMESPACE --rm -i --image=curlimages/curl --restart=Never -- \
-            curl -s http://frontend-w10e1/health || exit 1
+            curl http://frontend-w10e1/health
 
       - name: Destroy staging namespace
         if: always()
