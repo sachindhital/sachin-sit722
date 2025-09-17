@@ -1,13 +1,21 @@
-# .github/workflows/production-cd.yml check132334
+# .github/workflows/production-cd.yml
 
 name: CD - Deploy to Production
 
 on:
-  workflow_dispatch:   # Manual trigger for safety
+  # Manual trigger (safety fallback)
+  workflow_dispatch:
+
+  # Trigger when CI completes successfully
   workflow_run:
     workflows: ["Backend CI - Test, Build and Push Images to ACR", "Frontend CI - Build & Push Image"]
     types:
       - completed
+
+  # Trigger automatically when code is merged into main
+  push:
+    branches:
+      - main
 
 env:
   ACR_LOGIN_SERVER: ${{ secrets.AZURE_CONTAINER_REGISTRY }}
@@ -17,7 +25,8 @@ env:
 
 jobs:
   deploy-to-production:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Run only if workflow_run succeeded, or if triggered by push to main
+    if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     environment: Production
 
@@ -52,6 +61,7 @@ jobs:
           kubectl apply -n $PROD_NAMESPACE -f k8s/product-db.yaml
           kubectl apply -n $PROD_NAMESPACE -f k8s/order-service.yaml
           kubectl apply -n $PROD_NAMESPACE -f k8s/product-service.yaml
+          kubectl apply -n $PROD_NAMESPACE -f k8s/customer-service.yaml
 
       - name: Deploy Frontend
         run: kubectl apply -n $PROD_NAMESPACE -f k8s/frontend.yaml

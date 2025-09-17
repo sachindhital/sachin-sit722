@@ -18,11 +18,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Shopping Cart State
     let cart = [];
+    
     let productsCache = {}; // Cache products fetched to easily get details for cart items
 
     // --- Utility Functions ---
 
-    // Function to display messages to the user (success, error, info)
+    // Function to display messages to the user (success, error, info) aaaaaa
     function showMessage(message, type = 'info') {
         messageBox.textContent = message;
         messageBox.className = `message-box ${type}`;
