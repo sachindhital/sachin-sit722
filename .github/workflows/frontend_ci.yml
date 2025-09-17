@@ -1,0 +1,45 @@
+name: Frontend CI - Build & Push Image
+
+on:
+  workflow_dispatch: # Manual trigger
+  push:
+    branches:
+      - testing
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+
+env:
+  # Azure Container Registry login server (e.g., myregistry.azurecr.io)
+  ACR_LOGIN_SERVER: ${{ secrets.AZURE_CONTAINER_REGISTRY }}
+  # Unique tag for each image build (commit SHA + run ID)
+  IMAGE_TAG: ${{ github.sha }}-${{ github.run_id }}
+
+jobs:
+  build_and_push_frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to Azure Container Registry
+        run: az acr login --name ${{ env.ACR_LOGIN_SERVER }}
+
+      - name: Build and Push Frontend Image
+        run: |
+          # Build with both unique tag and latest
+          docker build -t ${{ env.ACR_LOGIN_SERVER }}/frontend:${{ env.IMAGE_TAG }} \
+                       -t ${{ env.ACR_LOGIN_SERVER }}/frontend:latest ./frontend/
+          # Push both tags
+          docker push ${{ env.ACR_LOGIN_SERVER }}/frontend:${{ env.IMAGE_TAG }}
+          docker push ${{ env.ACR_LOGIN_SERVER }}/frontend:latest
+
+      - name: Logout from Azure
+        if: always()
+        run: az logout
