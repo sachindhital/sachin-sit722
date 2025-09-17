@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const placeOrderForm = document.getElementById('place-order-form');
     const orderListDiv = document.getElementById('order-list');
 
-    // Shopping Cart State
+    // Shopping Cart State aadasda
     let cart = [];
     
     let productsCache = {}; // Cache products fetched to easily get details for cart items
