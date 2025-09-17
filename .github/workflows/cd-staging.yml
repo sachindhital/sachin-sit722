@@ -48,6 +48,7 @@ jobs:
         run: |
           kubectl apply -n $STAGING_NAMESPACE -f k8s/order-db.yaml
           kubectl apply -n $STAGING_NAMESPACE -f k8s/product-db.yaml
+          kubectl apply -n $STAGING_NAMESPACE -f k8s/customer-db.yaml
           kubectl apply -n $STAGING_NAMESPACE -f k8s/order-service.yaml
           kubectl apply -n $STAGING_NAMESPACE -f k8s/product-service.yaml
           kubectl apply -n $STAGING_NAMESPACE -f k8s/customer-service.yaml
