@@ -1,0 +1,108 @@
+name: CD - Deploy Frontend to Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      product_api_ip:
+        description: 'External IP of Product Service'
+        required: true
+        default: 'http://<ip_address>:8000'
+      order_api_ip:
+        description: 'External IP of Order Service'
+        required: true
+        default: 'http://<ip_address>:8001'
+      aks_cluster_name:
+        description: 'Name of the AKS Cluster to deploy to'
+        required: true
+        default: '<aks_name>'
+      aks_resource_group:
+        description: 'Resource Group of the AKS Cluster'
+        required: true
+        default: '<resource_group_name>'
+      staging_namespace:
+        description: 'Namespace for staging deployment'
+        required: true
+        default: 'staging-manual'
+
+  workflow_call:
+    inputs:
+      product_api_ip:
+        required: true
+        type: string
+      order_api_ip:
+        required: true
+        type: string
+      aks_cluster_name:
+        required: true
+        type: string
+      aks_resource_group:
+        required: true
+        type: string
+      staging_namespace:
+        required: true
+        type: string
+
+env:
+  ACR_LOGIN_SERVER: ${{ secrets.AZURE_CONTAINER_REGISTRY }}
+
+jobs:
+  deploy_frontend_staging:
+    runs-on: ubuntu-latest
+    environment: Staging
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to Azure Container Registry
+        run: az acr login --name $ACR_LOGIN_SERVER
+
+      - name: Inject Backend IPs into Frontend main.js
+        run: |
+          echo "Injecting backend IPs into frontend/main.js..."
+          sed -i "s|_PRODUCT_API_URL_|${{ inputs.product_api_ip }}|g" frontend/main.js
+          sed -i "s|_ORDER_API_URL_|${{ inputs.order_api_ip }}|g" frontend/main.js
+          echo "--- Modified main.js ---"
+          cat frontend/main.js
+          echo "------------------------"
+
+      - name: Build and Push Frontend Image
+        run: |
+          docker build -t $ACR_LOGIN_SERVER/frontend:latest ./frontend/
+          docker push $ACR_LOGIN_SERVER/frontend:latest
+
+      - name: Set Kubernetes context (get AKS credentials)
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ inputs.aks_resource_group }} \
+            --name ${{ inputs.aks_cluster_name }} \
+            --overwrite-existing
+
+      - name: Deploy Frontend to AKS
+        run: |
+          echo "Deploying frontend to namespace ${{ inputs.staging_namespace }}"
+          kubectl apply -n ${{ inputs.staging_namespace }} -f k8s/frontend.yaml
+
+      - name: Wait for Frontend Pod to be Ready
+        run: kubectl wait --for=condition=ready pod -l app=frontend -n ${{ inputs.staging_namespace }} --timeout=120s
+
+      - name: Run Frontend Health Check
+        run: |
+          FRONTEND_IP=$(kubectl get service frontend-w08e1 -n ${{ inputs.staging_namespace }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          echo "Frontend External IP: $FRONTEND_IP"
+          curl -f http://$FRONTEND_IP/health || exit 1
+
+      - name: (Optional) Destroy staging namespace
+        if: always()
+        run: |
+          echo "Cleaning up staging namespace..."
+          kubectl delete namespace ${{ inputs.staging_namespace }}
+
+      - name: Logout from Azure
+        if: always()
+        run: az logout
