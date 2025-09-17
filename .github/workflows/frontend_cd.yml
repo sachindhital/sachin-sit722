@@ -1,4 +1,4 @@
-name: CD - Deploy Frontend to Staging
+name: CD - Deploy Frontend 
 
 on:
   workflow_dispatch:
