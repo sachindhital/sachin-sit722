@@ -45,6 +45,17 @@ logger.info(
     f"Product Service: Configured to communicate with Order Service at: {ORDER_SERVICE_URL}"
 )
 
+# --- Service URLs Configuration ---
+PRODUCT_SERVICE_URL = os.getenv("PRODUCT_SERVICE_URL", "http://localhost:8001")
+logger.info(
+    f"Order Service: Configured to communicate with Product Service at: {PRODUCT_SERVICE_URL}"
+)
+
+CUSTOMER_SERVICE_URL = os.getenv("CUSTOMER_SERVICE_URL", "http://localhost:8002")
+logger.info(
+    f"Order Service: Configured to communicate with Customer Service at: {CUSTOMER_SERVICE_URL}"
+)
+
 
 
 
