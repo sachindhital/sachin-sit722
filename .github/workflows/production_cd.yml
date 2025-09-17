@@ -1,0 +1,65 @@
+# .github/workflows/production-cd.yml check132334
+
+name: CD - Deploy to Production
+
+on:
+  workflow_dispatch:   # Manual trigger for safety
+  workflow_run:
+    workflows: ["Backend CI - Test, Build and Push Images to ACR", "Frontend CI - Build & Push Image"]
+    types:
+      - completed
+
+env:
+  ACR_LOGIN_SERVER: ${{ secrets.AZURE_CONTAINER_REGISTRY }}
+  AKS_RESOURCE_GROUP: ${{ secrets.AKS_RESOURCE_GROUP }}
+  AKS_CLUSTER_NAME: ${{ secrets.AKS_CLUSTER_NAME }}
+  PROD_NAMESPACE: production
+
+jobs:
+  deploy-to-production:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    environment: Production
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group $AKS_RESOURCE_GROUP \
+            --name $AKS_CLUSTER_NAME \
+            --overwrite-existing
+
+      - name: Create Production namespace if not exists
+        run: |
+          kubectl get namespace $PROD_NAMESPACE || kubectl create namespace $PROD_NAMESPACE
+
+      - name: Deploy ConfigMaps & Secrets
+        run: |
+          kubectl apply -n $PROD_NAMESPACE -f k8s/configmaps.yaml
+          kubectl apply -n $PROD_NAMESPACE -f k8s/secrets.yaml
+
+      - name: Deploy Backend Services
+        run: |
+          kubectl apply -n $PROD_NAMESPACE -f k8s/order-db.yaml
+          kubectl apply -n $PROD_NAMESPACE -f k8s/product-db.yaml
+          kubectl apply -n $PROD_NAMESPACE -f k8s/order-service.yaml
+          kubectl apply -n $PROD_NAMESPACE -f k8s/product-service.yaml
+
+      - name: Deploy Frontend
+        run: kubectl apply -n $PROD_NAMESPACE -f k8s/frontend.yaml
+
+      - name: Wait for pods to be ready
+        run: kubectl wait --for=condition=ready pod --all -n $PROD_NAMESPACE --timeout=300s
+
+      - name: Run health checks
+        run: |
+          kubectl run curlpod -n $PROD_NAMESPACE --rm -i --image=curlimages/curl --restart=Never -- \
+            curl http://frontend-w010e1/health
