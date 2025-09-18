@@ -68,7 +68,8 @@ jobs:
         run: |
           kubectl run curlpod -n $STAGING_NAMESPACE --rm -i --image=curlimages/curl --restart=Never -- \
             curl http://frontend-w10e1/health
-
+      - name: Wait for manual inspection (10 minutes)
+        run: sleep 600
       - name: Destroy staging namespace
         if: always()
         run: kubectl delete namespace $STAGING_NAMESPACE
