@@ -3,6 +3,9 @@ name: CD - Deploy to Staging
 on:
   workflow_run:
     workflows: ["Backend CI - Test, Build and Push Images to ACR", "Frontend CI - Build & Push Image"]
+    push:
+    branches:
+      - testing
     types:
       - completed
 
