@@ -14,3 +14,4 @@ data:
 
   PRODUCT_SERVICE_URL: http://product-service-w10e1:8000
   ORDER_SERVICE_URL: http://order-service-w10e1:8001
+  CUSTOMER_SERVICE_URL: http://customer-service-w10e1:8002
