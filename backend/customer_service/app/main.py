@@ -13,7 +13,7 @@ from .db import Base, engine, get_db
 from .models import Customer
 from .schemas import CustomerCreate, CustomerResponse, CustomerUpdate
 
-# --- Standard Logging Configuration ---aaaaa hahahsha aassassa
+# --- Standard Logging Configuration ---aaaaa hahahsha aassassa saaas
 print()
 logging.basicConfig(
     level=logging.INFO,
