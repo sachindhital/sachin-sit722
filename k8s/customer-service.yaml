@@ -1,13 +1,13 @@
-# week04/k8s/customer-service.yaml
+# /k8s/customer-service.yaml
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: customer-service
+  name: customer-service-w10e1
   labels:
     app: customer-service
 spec:
-  replicas: 1 # Defaulting to 1 replica
+  replicas: 1
   selector:
     matchLabels:
       app: customer-service
@@ -19,33 +19,33 @@ spec:
       containers:
       - name: customer-service-container
         image: week10.azurecr.io/customer_service:latest
-        imagePullPolicy: Never
+        imagePullPolicy: Always
         ports:
         - containerPort: 8002
         env:
         # Database connection details
         - name: POSTGRES_HOST
-          value: customer-db-service
+          value: customer-db-service-w10e1
         - name: POSTGRES_DB
           valueFrom:
             configMapKeyRef:
-              name: config-map
+              name: ecomm-config-w10e1
               key: CUSTOMERS_DB_NAME
         - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
-              name: secrets
+              name: ecomm-secrets-w10e1
               key: POSTGRES_USER
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: secrets
+              name: ecomm-secrets-w10e1
               key: POSTGRES_PASSWORD
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: customer-service
+  name: customer-service-w10e1
   labels:
     app: customer-service
 spec:
@@ -53,7 +53,6 @@ spec:
     app: customer-service
   ports:
     - protocol: TCP
-      port: 8002 # The port the service listens on inside the cluster
-      targetPort: 8000 # The port on the Pod (containerPort)
-      #nodePort: 30010 # A high port (30000-32767) on your host machine to access the service (distinct)aa
-  type: NodePort # Exposes the service on a port on each Node's IP
+      port: 8002   # Exposed service port
+      targetPort: 8002 # Container port (should match containerPort)
+  type: ClusterIP # Only accessible within the cluster

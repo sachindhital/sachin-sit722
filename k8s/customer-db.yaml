@@ -1,24 +1,13 @@
-# week04/k8s/customer-db.yaml
+# week10/k8s/customer-db.yaml
 
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: customer-db-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce # This volume can be mounted as read-write by a single node
-  resources:
-    requests:
-      storage: 5Gi
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: customer-db-deployment
+  name: customer-db-deployment-w10e1 # Deployment name updated for week10
   labels:
     app: customer-db
 spec:
-  replicas: 1 # Defaulting to 1 replica
+  replicas: 1
   selector:
     matchLabels:
       app: customer-db
@@ -29,44 +18,38 @@ spec:
     spec:
       containers:
       - name: postgres
-        image: postgres:15-alpine
+        image: postgres:15-alpine # Lightweight Postgres image
         ports:
         - containerPort: 5432
         env:
         - name: POSTGRES_DB
           valueFrom:
             configMapKeyRef:
-              name: config-map
-              key: CUSTOMERS_DB_NAME # Point to the customer database name
+              name: ecomm-config-w10e1 # Updated to match week10 configmap
+              key: CUSTOMERS_DB_NAME
         - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
-              name: secrets
+              name: ecomm-secrets-w10e1 # Updated to match week10 secrets
               key: POSTGRES_USER
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: secrets
+              name: ecomm-secrets-w10e1 # Updated to match week10 secrets
               key: POSTGRES_PASSWORD
-        volumeMounts:
-        - name: customer-db-storage
-          mountPath: /var/lib/postgresql/data # Mount point for PostgreSQL data
-      volumes:
-      - name: customer-db-storage
-        persistentVolumeClaim:
-          claimName: customer-db-pvc # Link to the PVC defined above
+
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: customer-db-service # Internal DNS name for the Customer DB
+  name: customer-db-service-w10e1 # Service name updated for week10
   labels:
     app: customer-db
 spec:
   selector:
-    app: customer-db # Selects pods with the label app: customer-db
+    app: customer-db
   ports:
     - protocol: TCP
-      port: 5432 # The port the service listens on (default PostgreSQL)
-      targetPort: 5432 # The port on the Pod (containerPort)
-  type: ClusterIP # Only accessible from within the cluster
+      port: 5432
+      targetPort: 5432
+  type: ClusterIP # Only accessible inside the cluster
