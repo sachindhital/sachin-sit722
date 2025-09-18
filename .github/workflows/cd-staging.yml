@@ -1,10 +1,11 @@
-# .github/workflows/cd-staging.yml
-
 name: CD - Deploy to Staging
 
 on:
   workflow_run:
     workflows: ["Backend CI - Test, Build and Push Images to ACR", "Frontend CI - Build & Push Image"]
+    push:
+    branches:
+      - testing
     types:
       - completed
 
@@ -36,6 +37,13 @@ jobs:
             --name $AKS_CLUSTER_NAME \
             --overwrite-existing
 
+      - name: Attach ACR to AKS
+        run: |
+          az aks update \
+            --name $AKS_CLUSTER_NAME \
+            --resource-group $AKS_RESOURCE_GROUP \
+            --attach-acr ${{ secrets.AZURE_ACR_NAME }}
+
       - name: Create staging namespace
         run: kubectl create namespace $STAGING_NAMESPACE
 
@@ -63,7 +71,8 @@ jobs:
         run: |
           kubectl run curlpod -n $STAGING_NAMESPACE --rm -i --image=curlimages/curl --restart=Never -- \
             curl http://frontend-w10e1/health
-
+      - name: Wait for manual inspection (10 minutes)
+        run: sleep 600
       - name: Destroy staging namespace
         if: always()
         run: kubectl delete namespace $STAGING_NAMESPACE
